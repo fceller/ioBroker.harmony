@@ -195,7 +195,7 @@ function discoverStart() {
         const name = "hub" + i;
         const hub = {
           friendlyName: name,
-          ip: manualDiscoveryHub.ip
+          ip: manualDiscoverHub.ip
         };
 
         initHub(name, () => {
