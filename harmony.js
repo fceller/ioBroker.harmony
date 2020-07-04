@@ -189,46 +189,62 @@ function discoverStart() {
         return;
     } // endIf
 
-    adapter.getPort(61991, port => {
-        discover = new HarmonyHubDiscover(port, {address: subnet, port: 5224, interval: discoverInterval});
-        discover.on(HarmonyHubDiscover.Events.ONLINE, hub => {
-            // Triggered when a new hub was found
-            if (hub.friendlyName !== undefined) {
-                let addHub = false;
-                const hubName = fixId(hub.friendlyName).replace(`.`, `_`);
+    if (manualDiscoverHubs.length) {
+      let i = 1;
+      for (const manualDiscoverHub of manualDiscoverHubs) {
+        const name = "hub" + i;
+        const hub = {
+          friendlyName: name,
+          ip: manualDiscoveryHub.ip
+        };
 
-                if (manualDiscoverHubs.length) {
-                    for (const manualDiscoverHub of manualDiscoverHubs) {
-                        if (manualDiscoverHub.ip === hub.ip && !hubs[hubName]) {
-                            adapter.log.info(`[DISCOVER] Discovered ${hub.friendlyName} (${hub.ip}) and will try to connect`);
-                            addHub = true;
-                        } else if (!hubs[hubName]) {
-                            adapter.log.debug(`[DISCVOER] Discovered ${hub.friendlyName} (${hub.ip}) but won't try to connect, because \
-                            manual search is configured and hub's ip not listed`);
-                        }
-                    } // endFor
-                } else if (!hubs[hubName]) {
-                    adapter.log.info(`[DISCOVER] Discovered ${hub.friendlyName} (${hub.ip}) and will try to connect`);
-                    addHub = true; // if no manual discovery --> add all hubs
-                }
+        initHub(name, () => {
+            adapter.log.info(`[CONNECT] Connecting to ${hub.friendlyName} (${hub.ip})`);
+            connect(hubName, hub);
+        });
+      }
+    } else {
+        adapter.getPort(61991, port => {
+            discover = new HarmonyHubDiscover(port, {address: subnet, port: 5224, interval: discoverInterval});
+            discover.on(HarmonyHubDiscover.Events.ONLINE, hub => {
+                // Triggered when a new hub was found
+                if (hub.friendlyName !== undefined) {
+                    let addHub = false;
+                    const hubName = fixId(hub.friendlyName).replace(`.`, `_`);
 
-                if (addHub) {
-                    initHub(hubName, () => {
-                        // wait 2 seconds for hub before connecting
-                        adapter.log.info(`[CONNECT] Connecting to ${hub.friendlyName} (${hub.ip})`);
-                        connect(hubName, hub);
-                    });
+                    if (manualDiscoverHubs.length) {
+                        for (const manualDiscoverHub of manualDiscoverHubs) {
+                            if (manualDiscoverHub.ip === hub.ip && !hubs[hubName]) {
+                                adapter.log.info(`[DISCOVER] Discovered ${hub.friendlyName} (${hub.ip}) and will try to connect`);
+                                addHub = true;
+                            } else if (!hubs[hubName]) {
+                                adapter.log.debug(`[DISCVOER] Discovered ${hub.friendlyName} (${hub.ip}) but won't try to connect, because \
+                                manual search is configured and hub's ip not listed`);
+                            }
+                        } // endFor
+                    } else if (!hubs[hubName]) {
+                        adapter.log.info(`[DISCOVER] Discovered ${hub.friendlyName} (${hub.ip}) and will try to connect`);
+                        addHub = true; // if no manual discovery --> add all hubs
+                    }
+
+                    if (addHub) {
+                        initHub(hubName, () => {
+                            // wait 2 seconds for hub before connecting
+                            adapter.log.info(`[CONNECT] Connecting to ${hub.friendlyName} (${hub.ip})`);
+                            connect(hubName, hub);
+                        });
+                    } // endIf
                 } // endIf
-            } // endIf
-        });
+            });
 
-        discover.on(`error`, err => {
-            adapter.log.warn(`[DISCOVER] Discover error: ${err.message}`);
-        });
+            discover.on(`error`, err => {
+                adapter.log.warn(`[DISCOVER] Discover error: ${err.message}`);
+            });
 
-        discover.start();
-        adapter.log.info(`[DISCOVER] Searching for Harmony Hubs on ${subnet}`);
-    });
+            discover.start();
+            adapter.log.info(`[DISCOVER] Searching for Harmony Hubs on ${subnet}`);
+        });
+    }
 } // endDiscoverStart
 
 function initHub(hub, callback) {
