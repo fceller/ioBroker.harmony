@@ -200,7 +200,7 @@ function discoverStart() {
 
         initHub(name, () => {
             adapter.log.info(`[CONNECT] Connecting to ${hub.friendlyName} (${hub.ip})`);
-            connect(hubName, hub);
+            connect(name, hub);
         });
       }
     } else {
